@@ -1,5 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import sys
+import traceback
+import logging
+from functools import wraps
 
 
 class GestorTareasApp:
@@ -28,6 +32,32 @@ class GestorTareasApp:
         self.actualizar_lista()
 
         self.entry_tarea.focus()
+
+        # Configurar logger para depuración en archivo
+        logging.basicConfig(
+            filename="tareas_debug.log",
+            level=logging.DEBUG,
+            format="%(asctime)s %(levelname)s: %(message)s",
+            encoding="utf-8",
+        )
+
+    # Decorador para capturar y registrar excepciones en handlers de GUI
+    def manejar_errores(fn):
+        @wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return fn(self, *args, **kwargs)
+            except Exception as exc:
+                # Registrar traza completa
+                logging.exception("Error en %s", fn.__name__)
+                # Imprimir en consola también
+                traceback.print_exc()
+                # Mostrar diálogo de error si es posible
+                try:
+                    messagebox.showerror("Error", f"Se produjo un error: {exc}")
+                except Exception:
+                    pass
+        return wrapper
 
     def crear_interfaz(self):
         main_frame = ttk.Frame(self.root, padding="15")
@@ -152,6 +182,19 @@ class GestorTareasApp:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = GestorTareasApp(root)
-    root.mainloop()
+    # Mensajes de depuración para ayudar a identificar fallas al iniciar
+    print("Iniciando Gestor de Tareas...")
+    try:
+        root = tk.Tk()
+        app = GestorTareasApp(root)
+        print("Interfaz creada correctamente. Ejecutando mainloop...")
+        root.mainloop()
+    except Exception as e:
+        # Imprimir la traza completa en consola para depuración
+        traceback.print_exc()
+        # Intentar mostrar también un diálogo de error si la GUI está disponible
+        try:
+            messagebox.showerror("Error", f"Se produjo un error al iniciar la aplicación:\n{e}")
+        except Exception:
+            pass
+        sys.exit(1)
